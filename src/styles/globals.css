@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#fcfcfc] text-brand-navy antialiased min-h-screen font-sans;
+  }
+}
+
+/* Custom Scrollbars - Flat & Minimal */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 hover:bg-slate-300 transition-colors;
+}
+
+/* Flat panels */
+.flat-panel {
+  @apply bg-white border border-slate-200;
+}

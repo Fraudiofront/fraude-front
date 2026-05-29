@@ -15,10 +15,16 @@ import {
   AlertTriangle,
   ArrowRight,
   Shield,
-  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { formatChatTime } from "@/lib/formatChatTime"
+import {
+  ActiveCaseSkeleton,
+  AlertsSummarySkeleton,
+  ChatWelcomeSkeleton,
+  ClaimSelectSkeleton,
+  SuggestedQuestionsSkeleton,
+} from "@/components/copiloto/CopilotLoadingSkeletons"
 
 function buildCaseWelcome(claim: Claim): ChatMessage {
   return {
@@ -132,49 +138,57 @@ export default function CopilotoControlCenter() {
                 Resumen de Alertas Activas
               </h3>
 
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="bg-rose-50 border border-rose-100 rounded-md p-3.5">
-                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">
-                    Alertas Críticas
-                  </span>
-                  <span className="text-xl font-black text-rose-600 block mt-1">
-                    {loading ? "…" : `${criticalCount} Casos`}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                    Model 2 (Rojo)
-                  </span>
-                </div>
+              {loading ? (
+                <AlertsSummarySkeleton />
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <div className="bg-rose-50 border border-rose-100 rounded-md p-3.5">
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">
+                        Alertas Críticas
+                      </span>
+                      <span className="text-xl font-black text-rose-600 block mt-1">
+                        {criticalCount} Casos
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                        Model 2 (Rojo)
+                      </span>
+                    </div>
 
-                <div className="bg-brand-lightBlue/5 border border-brand-lightBlue/10 rounded-md p-3.5">
-                  <span className="text-[10px] font-bold text-brand-lightBlue uppercase tracking-wider block">
-                    Siniestros en Base
-                  </span>
-                  <span className="text-xl font-black text-brand-navy block mt-1">
-                    {loading ? "…" : summary?.total ?? claims.length}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                    Datos en vivo
-                  </span>
-                </div>
-              </div>
+                    <div className="bg-brand-lightBlue/5 border border-brand-lightBlue/10 rounded-md p-3.5">
+                      <span className="text-[10px] font-bold text-brand-lightBlue uppercase tracking-wider block">
+                        Siniestros en Base
+                      </span>
+                      <span className="text-xl font-black text-brand-navy block mt-1">
+                        {summary?.total ?? claims.length}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                        Datos en vivo
+                      </span>
+                    </div>
+                  </div>
 
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-md flex items-start gap-2.5">
-                <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider block">
-                    Alerta de Proveedor Crítico
-                  </span>
-                  <p className="text-[11px] text-brand-navy font-bold mt-1">
-                    Taller San José (Guayaquil)
-                  </p>
-                  <p className="text-[10.5px] text-slate-600 font-medium mt-0.5 leading-relaxed">
-                    Concentra el 45% de alertas rojas en la sucursal de Guayaquil con 4 expedientes en investigación.
-                  </p>
-                </div>
-              </div>
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-md flex items-start gap-2.5">
+                    <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider block">
+                        Alerta de Proveedor Crítico
+                      </span>
+                      <p className="text-[11px] text-brand-navy font-bold mt-1">
+                        Taller San José (Guayaquil)
+                      </p>
+                      <p className="text-[10.5px] text-slate-600 font-medium mt-0.5 leading-relaxed">
+                        Concentra el 45% de alertas rojas en la sucursal de Guayaquil con 4 expedientes en investigación.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
-            {selectedClaim && (
+            {loading ? (
+              <ActiveCaseSkeleton />
+            ) : selectedClaim ? (
               <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 bg-brand-blue flex items-center justify-center rounded-md border border-brand-lightBlue/20 text-brand-lightBlue">
@@ -197,7 +211,7 @@ export default function CopilotoControlCenter() {
                   <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="xl:col-span-7 bg-white border border-slate-200 rounded-lg flex flex-col justify-between h-[680px] shadow-sm">
@@ -225,7 +239,7 @@ export default function CopilotoControlCenter() {
                       Siniestro Activo:
                     </span>
                     {loading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-brand-lightBlue" />
+                      <ClaimSelectSkeleton />
                     ) : (
                       <select
                         value={selectedClaimId}
@@ -272,10 +286,7 @@ export default function CopilotoControlCenter() {
 
             <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50/50">
               {loading && activeTab === "case" && caseMessages.length === 0 ? (
-                <div className="flex items-center justify-center py-16 text-slate-400 text-xs gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Cargando siniestros desde el backend…
-                </div>
+                <ChatWelcomeSkeleton />
               ) : (
                 activeMessages.map((msg, idx) => (
                   <div
@@ -337,7 +348,10 @@ export default function CopilotoControlCenter() {
                 Preguntas Sugeridas
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {(activeTab === "case"
+                {loading && activeTab === "case" ? (
+                  <SuggestedQuestionsSkeleton />
+                ) : (
+                (activeTab === "case"
                   ? [
                       { q: "¿Por qué es de alto riesgo?", text: "¿Por qué este caso tiene score de riesgo alto?" },
                       {
@@ -364,7 +378,7 @@ export default function CopilotoControlCenter() {
                     <span>{sug.q}</span>
                     <ArrowRight className="w-2.5 h-2.5 text-slate-400" />
                   </button>
-                ))}
+                )))}
               </div>
             </div>
 
@@ -379,12 +393,12 @@ export default function CopilotoControlCenter() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage(inputValue)}
-                disabled={activeTab === "case" && !selectedClaimId}
+                disabled={(activeTab === "case" && (!selectedClaimId || loading)) || isTyping}
                 className="flex-1 px-3.5 py-2.5 border border-slate-200 text-xs text-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-lightBlue focus:border-brand-lightBlue rounded-md font-sans transition-all disabled:bg-slate-50"
               />
               <button
                 onClick={() => handleSendMessage(inputValue)}
-                disabled={activeTab === "case" && !selectedClaimId}
+                disabled={(activeTab === "case" && (!selectedClaimId || loading)) || isTyping}
                 className="w-10 h-10 bg-brand-blue text-white flex items-center justify-center hover:bg-brand-navy cursor-pointer shrink-0 rounded-md shadow-sm transition-all disabled:bg-slate-300"
               >
                 <Send className="w-4 h-4" />

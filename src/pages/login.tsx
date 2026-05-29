@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/router"
-import { Shield, ScanLine, RefreshCw, LogIn } from "lucide-react"
+import { Shield, ScanLine, RefreshCw } from "lucide-react"
+import GoogleIcon from "@/components/icons/GoogleIcon"
+import GmailScanLoader from "@/components/auth/GmailScanLoader"
+import LoginSessionLoader from "@/components/auth/LoginSessionLoader"
 import { useAuth } from "@/context/AuthContext"
 import { appUserFromGmailScan, saveUser } from "@/services/auth"
 import type { GmailScanAuditSummary } from "@/types/backend"
@@ -18,29 +21,41 @@ function formatScanSummary(result: { saved: number; ignored: number; audits: Gma
   return parts.join(" · ")
 }
 
+function oauthEmailFromQuery(email: string | string[] | undefined): string | null {
+  if (typeof email !== "string") return null
+  try {
+    return decodeURIComponent(email)
+  } catch {
+    return email
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
-  const { user, ready, scanning, gmailConnected, loginWithGmailScan, connectGmail } = useAuth()
+  const { user, ready, scanning, syncInFlight, gmailConnected, loginWithGmailScan, connectGmail } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [scanSummary, setScanSummary] = useState<string | null>(null)
+  const [postOAuthBusy, setPostOAuthBusy] = useState(false)
 
   const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "/"
   const postLoginRedirectRef = useRef(false)
+  const oauthEmail = oauthEmailFromQuery(router.query.email)
+  const isOAuthReturn = router.query.gmail === "connected"
+  const isScanningInbox = scanning || syncInFlight || postOAuthBusy || isOAuthReturn
 
   useEffect(() => {
-    if (!ready || !user || postLoginRedirectRef.current) return
+    if (!ready || !user || postLoginRedirectRef.current || isScanningInbox) return
     postLoginRedirectRef.current = true
     safeReplace(router, returnTo)
-  }, [ready, user, router, returnTo])
+  }, [ready, user, router, returnTo, isScanningInbox])
 
   useEffect(() => {
-    if (!ready || router.query.gmail !== "connected" || postLoginRedirectRef.current) return
+    if (!ready || !isOAuthReturn || postLoginRedirectRef.current) return
 
     async function finishOAuthLogin() {
+      setPostOAuthBusy(true)
       setError(null)
       try {
-        const oauthEmail =
-          typeof router.query.email === "string" ? decodeURIComponent(router.query.email) : null
         if (oauthEmail) {
           saveUser(
             appUserFromGmailScan({
@@ -59,16 +74,18 @@ export default function LoginPage() {
         safeReplace(router, returnTo)
       } catch (e) {
         postLoginRedirectRef.current = false
+        setPostOAuthBusy(false)
         setError(e instanceof Error ? e.message : "No se pudo completar el inicio de sesión.")
       }
     }
 
     void finishOAuthLogin()
-  }, [ready, router.query.gmail, router.query.email, loginWithGmailScan, returnTo, router])
+  }, [ready, isOAuthReturn, oauthEmail, loginWithGmailScan, returnTo, router])
 
   useEffect(() => {
     if (router.query.gmail === "error" && typeof router.query.message === "string") {
       setError(decodeURIComponent(router.query.message))
+      setPostOAuthBusy(false)
     }
   }, [router.query.gmail, router.query.message])
 
@@ -84,6 +101,7 @@ export default function LoginPage() {
   const handleScan = async () => {
     setError(null)
     setScanSummary(null)
+    setPostOAuthBusy(true)
     try {
       const result = await loginWithGmailScan()
       if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
@@ -92,16 +110,21 @@ export default function LoginPage() {
       postLoginRedirectRef.current = true
       safeReplace(router, returnTo)
     } catch (e) {
+      setPostOAuthBusy(false)
       setError(e instanceof Error ? e.message : "Error al escanear Gmail.")
     }
   }
 
-  if (!ready || user) {
-    return (
-      <div className="min-h-screen bg-brand-navy flex items-center justify-center text-white text-sm">
-        Cargando sesión…
-      </div>
-    )
+  if (!ready) {
+    return <LoginSessionLoader />
+  }
+
+  if (isScanningInbox && !error) {
+    return <GmailScanLoader email={oauthEmail ?? user?.email} />
+  }
+
+  if (user && !isScanningInbox) {
+    return <LoginSessionLoader message="Abriendo bandeja de triaje…" />
   }
 
   return (
@@ -141,10 +164,10 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleConnect(false)}
               disabled={scanning}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-blue hover:bg-brand-navy disabled:bg-slate-300 text-white text-xs font-black uppercase tracking-wider rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white hover:bg-slate-50 disabled:bg-slate-100 disabled:opacity-60 text-slate-700 text-sm font-semibold border border-slate-300 rounded-md shadow-sm transition-colors"
             >
-              <LogIn className="w-4 h-4" />
-              Conectar con Google
+              <GoogleIcon className="w-5 h-5 shrink-0" />
+              <span>Continuar con Google</span>
             </button>
           ) : (
             <button
@@ -171,7 +194,9 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleConnect(true)}
+              className="w-full flex items-center justify-center gap-2 py-2 text-[11px] font-semibold text-slate-500 hover:text-brand-blue transition-colors"
             >
+              <GoogleIcon className="w-4 h-4 shrink-0" />
               Usar otra cuenta de Google
             </button>
           )}

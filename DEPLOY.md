@@ -151,6 +151,33 @@ vercel inspect fraude-front.vercel.app
 
 ---
 
+## Despliegue automático (push a `main`)
+
+### Opción A — Recomendada: GitHub en Vercel (sin Actions)
+
+1. Repo: `https://github.com/Dazaiyan/fraude-front`
+2. [Vercel Dashboard](https://vercel.com) → **fraude-front** → **Settings → Git**
+3. Conecta el repo y pon **Production Branch**: `main`
+4. Variable en Vercel (una vez): `NEXT_PUBLIC_API_URL=https://fraude-back-production.up.railway.app`
+
+Flujo: `git push origin main` → build y deploy en https://fraude-front.vercel.app
+
+### Opción B — GitHub Actions
+
+Archivo: `.github/workflows/deploy-vercel.yml`
+
+Secrets en GitHub → **fraude-front** → **Settings → Secrets → Actions**:
+
+| Secret | Cómo obtenerlo |
+|--------|----------------|
+| `VERCEL_TOKEN` | [vercel.com/account/tokens](https://vercel.com/account/tokens) |
+| `VERCEL_ORG_ID` | `.vercel/project.json` → `orgId` |
+| `VERCEL_PROJECT_ID` | `.vercel/project.json` → `projectId` |
+
+Si usas **Opción A**, no hace falta el workflow.
+
+---
+
 ## Verificar que funciona
 
 1. Abre https://fraude-front.vercel.app/login (usa el alias, no la URL preview larga)

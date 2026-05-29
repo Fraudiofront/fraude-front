@@ -27,6 +27,7 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.despligue
 
 # Operating System Files
 .DS_Store
@@ -41,3 +42,4 @@ Thumbs.db
 *.sln
 *.swp
 *.swo
+.vercel

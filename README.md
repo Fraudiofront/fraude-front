@@ -1,45 +1,113 @@
-# ShieldMind AI - Aseguradora del Sur 🛡️🧠
+# ShieldMind AI - Aseguradora del Sur
 
-Este es el frontend de **ShieldMind AI**, un prototipo interactivo de nivel producción diseñado para el **HacklAthon 2026** de Aseguradora del Sur. La plataforma automatiza el triaje ético, el análisis de riesgo y la detección inteligente de fraudes en siniestros de seguros mediante Inteligencia Artificial.
+Frontend de **ShieldMind AI** (Next.js) para triaje, analisis de riesgo y deteccion de fraude en siniestros.
 
-## 🚀 Stack Tecnológico
+## Requisitos
 
-- **Framework:** Next.js (Pages Router, TypeScript, React)
-- **Estilos:** Tailwind CSS (Paleta de colores corporativa: Azul, Celeste, Navy y Blanco)
-- **Visualización de Datos:** Recharts para gráficos de analítica de riesgo
-- **Consumo de APIs:** Axios con una capa de servicios aislada y robusta
+| Componente | Version |
+|------------|---------|
+| Node.js | 20+ (recomendado con [nvm-windows](https://github.com/coreybutler/nvm-windows)) |
+| pnpm | opcional (`npm install -g pnpm`) |
 
-## 📁 Arquitectura del Proyecto
+Backend en ejecucion: `http://127.0.0.1:8000` (ver `fraude-back`).
 
-```
-frontend/
-├── src/
-│   ├── components/       # Componentes visuales reutilizables
-│   │   ├── layout/       # Sidebar de navegación general, Header
-│   │   ├── triage/       # Tabla de siniestros, Badges de alerta
-│   │   ├── case-detail/  # Panel de datos duros, Clarity Card, Widget de Similitud (NLP)
-│   │   └── chatbot/      # Panel de chat interactivo colapsable (Copiloto)
-│   ├── pages/            # Vistas principales de Next.js
-│   │   ├── index.tsx     # Vista 1: Triaje (Bandeja de Entrada)
-│   │   ├── caso/[id].tsx # Vista 2: Expediente y Detalle del Siniestro (Split Screen)
-│   │   └── reportar.tsx  # Vista 3: Formulario Público de Siniestros (Para el asegurado)
-│   ├── services/         # Conexión al Backend con Axios
-│   │   ├── api.ts        # Configuración base de Axios (BaseURL, interceptores)
-│   │   └── claims.ts     # Endpoints del backend (/claims, /claims/{id}, /chat)
-│   └── styles/
-│       └── globals.css
+## Inicio rapido (Windows)
+
+```powershell
+cd D:\work\fraude-front
+
+# Si node/pnpm no se reconocen en esta terminal, carga Node en la sesion:
+. .\scripts\ensure-node.ps1
+
+pnpm install
+pnpm dev
 ```
 
-## 🛠️ Instalación y Uso
+O un solo comando (instala deps si faltan y arranca Next):
 
-1. Instala las dependencias en la carpeta `frontend/`:
-   ```bash
-   npm install
-   ```
+```powershell
+.\scripts\dev-up.ps1
+```
 
-2. Ejecuta el servidor de desarrollo local:
-   ```bash
-   npm run dev
-   ```
+Abre **http://localhost:3000**.
 
-3. Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+Variables: copia `.env.example` a `.env.local` (local) o `.env.despligue` (Vercel).
+
+**Despliegue:** ver [DEPLOY.md](./DEPLOY.md)
+
+## Despliegue en Vercel (resumen)
+
+Produccion: **https://fraude-front.vercel.app**
+
+```powershell
+cd D:\work\fraude-front
+. .\scripts\ensure-node.ps1   # si hace falta Node en la sesion
+vercel login                  # solo la primera vez
+.\scripts\vercel-deploy.ps1
+```
+
+`.env.despligue`:
+
+```env
+NEXT_PUBLIC_API_URL=https://fraude-back-production.up.railway.app
+```
+
+En Railway (backend), CORS debe incluir el front:
+
+```env
+FRONTEND_URL=https://fraude-front.vercel.app
+ALLOWED_ORIGINS=https://fraude-front.vercel.app
+```
+
+## Stack
+
+- **Next.js** (Pages Router, TypeScript, React)
+- **Tailwind CSS**
+- **Recharts**, **Axios**
+
+## Estructura
+
+```
+src/
+├── components/   # layout, triage, case-detail, chatbot
+├── pages/        # index, caso/[id], correos, copiloto, login, ...
+├── services/     # api.ts, claims, gmail, auth
+├── hooks/
+└── styles/
+```
+
+## Problemas frecuentes
+
+### `node.exe` no se reconoce / `pnpm` falla
+
+**Causa habitual:** Cursor (o la terminal) se abrio **antes** de instalar Node o de corregir el PATH. Las pestanas nuevas siguen usando el entorno del proceso padre.
+
+**Solucion rapida (esta sesion):**
+
+```powershell
+. .\scripts\ensure-node.ps1
+node -v
+pnpm install
+```
+
+**Solucion permanente:**
+
+1. Cierra **Cursor por completo** (no solo la pestana de terminal) y vuelve a abrirlo.
+2. Comprueba que exista `C:\nvm4w\nodejs\node.exe` (o tu ruta de nvm).
+3. En Variables de entorno de Windows, el PATH de usuario **no** debe tener entradas literales `%NVM_HOME%` / `%NVM_SYMLINK%`; deben ser rutas reales, por ejemplo:
+   - `C:\Users\<tu-usuario>\AppData\Local\nvm`
+   - `C:\nvm4w\nodejs`
+
+Si usas nvm-windows y no hay version activa:
+
+```powershell
+nvm install 20
+nvm use 20
+```
+
+### Sin pnpm
+
+```powershell
+npm install
+npm run dev
+```

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/router"
 import { Shield, ScanLine, RefreshCw, LogIn } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { appUserFromGmailScan, saveUser } from "@/services/auth"
 import type { GmailScanAuditSummary } from "@/types/backend"
+import { safeReplace } from "@/utils/navigation"
 
 function formatScanSummary(result: { saved: number; ignored: number; audits: GmailScanAuditSummary[] }) {
   const parts = [`${result.saved} correos nuevos · ${result.ignored} ignorados`]
@@ -37,14 +38,16 @@ export default function LoginPage() {
   const [isConnecting, setIsConnecting] = useState(false)
 
   const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "/"
+  const postLoginRedirectRef = useRef(false)
 
   useEffect(() => {
-    if (!ready || !user) return
-    router.replace(returnTo)
+    if (!ready || !user || postLoginRedirectRef.current) return
+    postLoginRedirectRef.current = true
+    safeReplace(router, returnTo)
   }, [ready, user, router, returnTo])
 
   useEffect(() => {
-    if (!ready || router.query.gmail !== "connected") return
+    if (!ready || router.query.gmail !== "connected" || postLoginRedirectRef.current) return
 
     async function finishOAuthLogin() {
       setError(null)
@@ -65,7 +68,8 @@ export default function LoginPage() {
         if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
           setScanSummary(formatScanSummary(result))
         }
-        router.replace(returnTo)
+        postLoginRedirectRef.current = true
+        safeReplace(router, returnTo)
       } catch (e) {
         // Clear the oauth callback params so the loading screen goes away and shows the error
         router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
@@ -73,7 +77,7 @@ export default function LoginPage() {
       }
     }
 
-    finishOAuthLogin()
+    void finishOAuthLogin()
   }, [ready, router.query.gmail, router.query.email, loginWithGmailScan, returnTo, router])
 
   useEffect(() => {
@@ -103,7 +107,8 @@ export default function LoginPage() {
       if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
         setScanSummary(formatScanSummary(result))
       }
-      router.replace(returnTo)
+      postLoginRedirectRef.current = true
+      safeReplace(router, returnTo)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al escanear Gmail.")
     }

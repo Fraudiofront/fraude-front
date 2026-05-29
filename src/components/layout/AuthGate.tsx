@@ -1,19 +1,20 @@
 import type { ReactNode } from "react"
 import { useRouter } from "next/router"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useAuth } from "@/context/AuthContext"
+import { redirectToLogin } from "@/utils/navigation"
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { user, ready } = useAuth()
   const isLoginPage = router.pathname === "/login"
+  const redirectingRef = useRef(false)
 
   useEffect(() => {
-    if (!ready || isLoginPage) return
-    if (!user) {
-      router.replace(`/login?returnTo=${encodeURIComponent(router.asPath)}`)
-    }
-  }, [ready, user, isLoginPage, router])
+    if (!ready || isLoginPage || user || redirectingRef.current) return
+    redirectingRef.current = true
+    redirectToLogin(router.asPath)
+  }, [ready, user, isLoginPage, router.asPath])
 
   if (!ready) {
     return (

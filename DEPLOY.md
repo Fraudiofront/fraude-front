@@ -131,6 +131,10 @@ railway redeploy --service fraude-back -y
 
 El redirect de Google debe estar configurado en el cliente OAuth **Web** (ver `fraude-back/DEPLOY.md`).
 
+### Login bloqueado (403 / solo testers)
+
+La app OAuth en Google Cloud debe estar **publicada en producción** o el usuario debe estar en **Usuarios de prueba**. Pasos detallados: [fraude-back/DEPLOY.md § Pantalla de consentimiento](../fraude-back/DEPLOY.md#pantalla-de-consentimiento--permitir-cualquier-gmail).
+
 ---
 
 ## Redeploy

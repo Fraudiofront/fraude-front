@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import { useRouter } from "next/router"
 import { Shield, ScanLine, RefreshCw, LogIn } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { appUserFromGmailScan, saveUser } from "@/services/auth"
 import type { GmailScanAuditSummary } from "@/types/backend"
 
 function formatScanSummary(result: { saved: number; ignored: number; audits: GmailScanAuditSummary[] }) {
@@ -35,6 +36,18 @@ export default function LoginPage() {
     async function finishOAuthLogin() {
       setError(null)
       try {
+        const oauthEmail =
+          typeof router.query.email === "string" ? decodeURIComponent(router.query.email) : null
+        if (oauthEmail) {
+          saveUser(
+            appUserFromGmailScan({
+              email: oauthEmail,
+              name: oauthEmail.split("@")[0] ?? oauthEmail,
+              role: "Analista de Fraude",
+            })
+          )
+        }
+
         const result = await loginWithGmailScan()
         if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
           setScanSummary(formatScanSummary(result))
@@ -46,7 +59,7 @@ export default function LoginPage() {
     }
 
     finishOAuthLogin()
-  }, [ready, router.query.gmail, loginWithGmailScan, returnTo, router])
+  }, [ready, router.query.gmail, router.query.email, loginWithGmailScan, returnTo, router])
 
   useEffect(() => {
     if (router.query.gmail === "error" && typeof router.query.message === "string") {

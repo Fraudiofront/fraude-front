@@ -1,6 +1,6 @@
 /** Umbrales alineados con FraudScoringService (fraude-back/app/integrations/siniestros/scoring.py) */
-export const SCORE_THRESHOLD_ROJO = 71
-export const SCORE_THRESHOLD_AMARILLO = 36
+export const SCORE_THRESHOLD_ROJO = 50
+export const SCORE_THRESHOLD_AMARILLO = 25
 
 export type ScoreColor = "Verde" | "Amarillo" | "Rojo"
 export type ScoreBand = "Bajo" | "Medio" | "Alto"
@@ -31,18 +31,31 @@ export function riskLevelToScoreColor(level: RiskLevel): ScoreColor {
   return "Verde"
 }
 
-/** Normaliza color/banda desde el puntaje (fuente de verdad para la UI) */
-export function normalizeScorePresentation(score: number): {
+function isScoreColor(value?: string | null): value is ScoreColor {
+  return value === "Verde" || value === "Amarillo" || value === "Rojo"
+}
+
+function isScoreBand(value?: string | null): value is ScoreBand {
+  return value === "Bajo" || value === "Medio" || value === "Alto"
+}
+
+/** Normaliza presentación: prioriza color/banda del backend cuando vienen en la respuesta. */
+export function normalizeScorePresentation(
+  score: number,
+  backendColor?: string | null,
+  backendBand?: string | null,
+): {
   total_score: number
   score_color: ScoreColor
   score_band: ScoreBand
   riskLevel: RiskLevel
 } {
-  const score_color = scoreToColor(score)
+  const score_color = isScoreColor(backendColor) ? backendColor : scoreToColor(score)
+  const score_band = isScoreBand(backendBand) ? backendBand : scoreToBand(score)
   return {
     total_score: score,
     score_color,
-    score_band: scoreToBand(score),
+    score_band,
     riskLevel: scoreColorToRiskLevel(score_color),
   }
 }

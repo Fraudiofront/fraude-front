@@ -907,7 +907,7 @@ export const claimsService = {
         // Campos de reglas adaptados al backend
         total_score: simulatedScore,
         average_points: Number((simulatedScore / 8).toFixed(2)),
-        score_color: simulatedScore >= 71 ? "Rojo" : simulatedScore >= 36 ? "Amarillo" : "Verde",
+        score_color: simulatedScore >= 50 ? "Rojo" : simulatedScore >= 25 ? "Amarillo" : "Verde",
         score_band: simulatedScore >= 71 ? "Alto" : simulatedScore >= 36 ? "Medio" : "Bajo",
         rules: [
           {

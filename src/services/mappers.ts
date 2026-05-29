@@ -57,7 +57,7 @@ export function mapStatusToEstado(status: Claim["status"]): string {
 
 export function mapSiniestroToClaim(s: SiniestroBackend): Claim {
   const score = s.total_score ?? 0
-  const normalized = normalizeScorePresentation(score)
+  const normalized = normalizeScorePresentation(score, s.score_color, s.score_band)
 
   const base: Claim = {
     id: s.id_siniestro,
@@ -117,7 +117,11 @@ export function mapSiniestroToClaim(s: SiniestroBackend): Claim {
 }
 
 export function applyScoringToClaim(claim: Claim, scoring: ScoringResponse): Claim {
-  const normalized = normalizeScorePresentation(scoring.total_score)
+  const normalized = normalizeScorePresentation(
+    scoring.total_score,
+    scoring.score_color,
+    scoring.score_band,
+  )
   const clarityScoreBreakdown = scoring.breakdown
     .filter((item) => item.matched && item.points > 0)
     .map((item) => ({ label: item.title, points: item.points }))

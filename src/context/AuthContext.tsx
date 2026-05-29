@@ -82,31 +82,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const refreshGmailStatus = useCallback(async () => {
+    const stored = loadStoredUser()
     const cached = readGmailStatusCache()
-    if (cached !== null) {
+    if (cached !== null && stored?.email) {
       setGmailConnected(cached)
       return
     }
 
     try {
-      const status = await getGmailAuthStatus()
-      writeGmailStatusCache(status.connected)
-      if (mountedRef.current) setGmailConnected(status.connected)
+      const status = await getGmailAuthStatus(stored?.email)
+      const connected =
+        status.connected &&
+        Boolean(status.user?.email) &&
+        (!stored?.email || status.user?.email?.toLowerCase() === stored.email.toLowerCase())
+      writeGmailStatusCache(connected)
+      if (mountedRef.current) setGmailConnected(connected)
     } catch {
-      const stored = loadStoredUser()
-      if (mountedRef.current) setGmailConnected(Boolean(stored?.email))
+      if (mountedRef.current) setGmailConnected(false)
     }
   }, [])
 
   useEffect(() => {
     const stored = loadStoredUser()
     setUser(stored)
-    const cached = readGmailStatusCache()
-    if (cached !== null) {
-      setGmailConnected(cached)
-    } else if (stored?.email) {
-      setGmailConnected(true)
-    }
+    setGmailConnected(false)
     setReady(true)
     void refreshGmailStatus()
   }, [refreshGmailStatus])

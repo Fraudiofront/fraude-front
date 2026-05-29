@@ -1,7 +1,7 @@
 import React from "react"
 import { Sparkles, ShieldCheck } from "lucide-react"
 import { Claim } from "@/services/claims"
-import { scoreToBand, scoreToColor } from "@/utils/scoring"
+import { scoreToBand, scoreToColor, type ScoreBand, type ScoreColor } from "@/utils/scoring"
 
 interface ClarityCardProps {
   claim?: Claim | null
@@ -24,8 +24,18 @@ export default function ClarityCard({ claim }: ClarityCardProps) {
 
   // Si viene total_score del backend lo prioriza, de lo contrario usa riskScore
   const score = activeClaim.total_score !== undefined ? activeClaim.total_score : activeClaim.riskScore
-  const riskColor = scoreToColor(score)
-  const riskBand = scoreToBand(score)
+  const riskColor: ScoreColor =
+    activeClaim.score_color === "Verde" ||
+    activeClaim.score_color === "Amarillo" ||
+    activeClaim.score_color === "Rojo"
+      ? activeClaim.score_color
+      : scoreToColor(score)
+  const riskBand: ScoreBand =
+    activeClaim.score_band === "Bajo" ||
+    activeClaim.score_band === "Medio" ||
+    activeClaim.score_band === "Alto"
+      ? activeClaim.score_band
+      : scoreToBand(score)
   
   const breakdown = activeClaim.clarityScoreBreakdown || defaultBreakdown
   const rules = activeClaim.rules

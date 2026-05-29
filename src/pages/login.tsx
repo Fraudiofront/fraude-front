@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/router"
 import { Shield, ScanLine, RefreshCw, LogIn } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { appUserFromGmailScan, saveUser } from "@/services/auth"
 import type { GmailScanAuditSummary } from "@/types/backend"
+import { safeReplace } from "@/utils/navigation"
 
 function formatScanSummary(result: { saved: number; ignored: number; audits: GmailScanAuditSummary[] }) {
   const parts = [`${result.saved} correos nuevos · ${result.ignored} ignorados`]
@@ -16,37 +18,67 @@ function formatScanSummary(result: { saved: number; ignored: number; audits: Gma
   return parts.join(" · ")
 }
 
+function FullPageLoading({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-brand-navy flex flex-col items-center justify-center gap-5">
+      <div className="w-14 h-14 bg-brand-blue flex items-center justify-center rounded-lg border border-brand-lightBlue/30">
+        <Shield className="w-8 h-8 text-brand-lightBlue" />
+      </div>
+      <RefreshCw className="w-5 h-5 text-brand-lightBlue animate-spin" />
+      <p className="text-sm text-slate-400">{message}</p>
+    </div>
+  )
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const { user, ready, scanning, gmailConnected, loginWithGmailScan, connectGmail } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [scanSummary, setScanSummary] = useState<string | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
 
   const returnTo = typeof router.query.returnTo === "string" ? router.query.returnTo : "/"
+  const postLoginRedirectRef = useRef(false)
 
   useEffect(() => {
-    if (!ready || !user) return
-    router.replace(returnTo)
+    if (!ready || !user || postLoginRedirectRef.current) return
+    postLoginRedirectRef.current = true
+    safeReplace(router, returnTo)
   }, [ready, user, router, returnTo])
 
   useEffect(() => {
-    if (!ready || router.query.gmail !== "connected") return
+    if (!ready || router.query.gmail !== "connected" || postLoginRedirectRef.current) return
 
     async function finishOAuthLogin() {
       setError(null)
       try {
+        const oauthEmail =
+          typeof router.query.email === "string" ? decodeURIComponent(router.query.email) : null
+        if (oauthEmail) {
+          saveUser(
+            appUserFromGmailScan({
+              email: oauthEmail,
+              name: oauthEmail.split("@")[0] ?? oauthEmail,
+              role: "Analista de Fraude",
+            })
+          )
+        }
+
         const result = await loginWithGmailScan()
         if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
           setScanSummary(formatScanSummary(result))
         }
-        router.replace(returnTo)
+        postLoginRedirectRef.current = true
+        safeReplace(router, returnTo)
       } catch (e) {
+        // Clear the oauth callback params so the loading screen goes away and shows the error
+        router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`)
         setError(e instanceof Error ? e.message : "No se pudo completar el inicio de sesión.")
       }
     }
 
-    finishOAuthLogin()
-  }, [ready, router.query.gmail, loginWithGmailScan, returnTo, router])
+    void finishOAuthLogin()
+  }, [ready, router.query.gmail, router.query.email, loginWithGmailScan, returnTo, router])
 
   useEffect(() => {
     if (router.query.gmail === "error" && typeof router.query.message === "string") {
@@ -56,9 +88,13 @@ export default function LoginPage() {
 
   const handleConnect = async (revokeExisting = false) => {
     setError(null)
+    setIsConnecting(true)
     try {
       await connectGmail(returnTo, revokeExisting)
+      // connectGmail does window.location.href redirect; if it returns without redirecting, reset
+      setIsConnecting(false)
     } catch (e) {
+      setIsConnecting(false)
       setError(e instanceof Error ? e.message : "No se pudo iniciar OAuth de Gmail.")
     }
   }
@@ -71,18 +107,26 @@ export default function LoginPage() {
       if (result.saved > 0 || result.ignored > 0 || result.audits.length > 0) {
         setScanSummary(formatScanSummary(result))
       }
-      router.replace(returnTo)
+      postLoginRedirectRef.current = true
+      safeReplace(router, returnTo)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al escanear Gmail.")
     }
   }
 
+  // Full-page loading: auth not ready or user already resolved (redirect pending)
   if (!ready || user) {
-    return (
-      <div className="min-h-screen bg-brand-navy flex items-center justify-center text-white text-sm">
-        Cargando sesión…
-      </div>
-    )
+    return <FullPageLoading message="Cargando sesión…" />
+  }
+
+  // Full-page loading: clicked connect (waiting for Google redirect)
+  if (isConnecting) {
+    return <FullPageLoading message="Redirigiendo a Google…" />
+  }
+
+  // Full-page loading: returned from Google OAuth callback or Gmail scan in progress
+  if (router.query.gmail === "connected" || scanning) {
+    return <FullPageLoading message="Sincronizando tu bandeja de entrada…" />
   }
 
   return (
@@ -121,8 +165,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleConnect(false)}
-              disabled={scanning}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-blue hover:bg-brand-navy disabled:bg-slate-300 text-white text-xs font-black uppercase tracking-wider rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-blue hover:bg-brand-navy text-white text-xs font-black uppercase tracking-wider rounded-md transition-colors"
             >
               <LogIn className="w-4 h-4" />
               Conectar con Google
@@ -131,20 +174,10 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleScan}
-              disabled={scanning}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-blue hover:bg-brand-navy disabled:bg-slate-300 text-white text-xs font-black uppercase tracking-wider rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-blue hover:bg-brand-navy text-white text-xs font-black uppercase tracking-wider rounded-md transition-colors"
             >
-              {scanning ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Escaneando Gmail…
-                </>
-              ) : (
-                <>
-                  <ScanLine className="w-4 h-4" />
-                  Escanear Gmail e ingresar
-                </>
-              )}
+              <ScanLine className="w-4 h-4" />
+              Escanear Gmail e ingresar
             </button>
           )}
 

@@ -1,5 +1,5 @@
 import api from "./api"
-import { appUserFromGmailScan, type AppUser } from "./auth"
+import { appUserFromGmailScan, loadStoredUser, type AppUser } from "./auth"
 import type { GmailAuthStatus, GmailAuthUrlResponse, GmailCorreoRead, GmailScanAuditSummary, GmailScanResponse } from "@/types/backend"
 
 function extractApiError(error: unknown): string {
@@ -16,9 +16,16 @@ function extractApiError(error: unknown): string {
   return axiosError.message || "Error desconocido al conectar Gmail."
 }
 
-export async function getGmailAuthStatus(): Promise<GmailAuthStatus> {
+export async function getGmailAuthStatus(email?: string): Promise<GmailAuthStatus> {
+  const headers: Record<string, string> = {}
+  const analystEmail = email?.trim() || loadStoredUser()?.email?.trim()
+  if (analystEmail) {
+    headers["X-Analyst-Email"] = analystEmail
+  }
+
   const response = await api.get<GmailAuthStatus>("/api/v1/gmail/auth/status", {
     timeout: 8000,
+    headers,
   })
   return response.data
 }
